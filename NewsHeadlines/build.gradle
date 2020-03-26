@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '3.141.59'
+    testCompile group: 'org.testng', name: 'testng', version: '7.0.0'
+    implementation 'org.testng:testng:6.9.6'
+    compile group: 'io.github.bonigarcia', name: 'webdrivermanager', version: '3.7.1'
+    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.6'
+}
+test{
+    useTestNG()
+}
