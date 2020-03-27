@@ -1,25 +1,37 @@
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
 import io.restassured.RestAssured;
+import io.restassured.parsing.Parser;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import io.restassured.response.ResponseBody;
+import org.json.simple.JSONArray;
 import org.junit.Before;
 import org.junit.Test;
+
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.request;
 
 public class SpotifyRestAssured {
     String token;
-    String userId;
-    String playlistName;
-    String tracklist;
+    String userId;;
+    List<String> playlists=new ArrayList<>();
+    List<String> tracklists=new ArrayList<>();
 
 
     @Before
     public void setUp() {
-        token = "Bearer BQABAdlvpSc2AreWFDdwSoEgwo3R0Ns9zfJcT3YbgyVlHvsDJcdkAHJjzn1xFbqLmLu-W8OwERDI5PcS7bBjKnpLCKGGmSmMp5WdQxqi1r5S0Z9rMW57TD_uXBg2YZ6u_xnT3pX9Uig35rDwq3CIuPopdHBV6IfE5D-aTrjl9-0Yt9mdCfprHLW0YO1omudR6XKhJKV7rLu-kz8LWKd3-2UaJe3aekYnhNobbBGj_7PLKXfaPWs2KMLFWZciK9Fduu6sk4IPcdxLZn5SSqsUWTOBaUismw";
+        token ="Bearer BQDUyjqTqEn8SuMKi1CcDirlIKgK666SdPA7QF3XKjpN6wsEMpBX_T0Bh_9jFIckAH9AQXzLFq3kc5tzpgKBdAUTBUdwjShHEbP48wL7ahvcYihwwWjTsHMplpApPOcV1gkVaysWuj0wX3IFRJ1zfpLGCxRdmhsVt7Sghlt9_5p2gUM2KhdqhfHfAVNTMgUFK7Ayxg37j_NQ4UCPkYVrkMOxZbPq3vL_QG2yDzETSYxn1xjf7PMQO2MJrq8Rkv6Z5taAuchVB78pH3pUqdE0Cw3513-8WA";
     }
-    @Test
+   @Test
     public void spotify_RestAssured_AutomationTest() {
         Response respons = given()
                 .header("Accept", "application/json")
@@ -30,18 +42,21 @@ public class SpotifyRestAssured {
         ResponseBody body = respons.getBody();
         JsonObject object = (JsonObject) new JsonParser().parse(body.prettyPrint());
         userId = String.valueOf(object.get("id"));
+        userId=userId.replace("\"","");
         System.out.println(userId);
         respons.then().assertThat().statusCode(200);
     }
 
     @Test
     public void whenGivenToken_ShouldReturnUserId() {
+        spotify_RestAssured_AutomationTest();
         Response responseForUser = given()
                 .accept("application/json")
                 .contentType("application/json")
                 .header("Authorization", token)
                 .when()
                 .get("https://api.spotify.com/v1/users/"+userId);
+        System.out.println(userId);
         ResponseBody body = responseForUser.getBody();
         JsonObject object = (JsonObject) new JsonParser().parse(body.prettyPrint());
         String type = String.valueOf(object.get("type"));
@@ -57,6 +72,7 @@ public class SpotifyRestAssured {
                 .header("Authorization", token)
                 .when()
                 .get("https://api.spotify.com/v1/users/"+userId+"/playlists");
+        System.out.println(userId);
         String asString = responseUserList.asString();
         JsonPath jsonPath = new JsonPath(asString);
         int total = jsonPath.getInt("total");
@@ -67,25 +83,20 @@ public class SpotifyRestAssured {
     //-------------------------------playlist---------------------------------------------------------------------------
     @Test
     public void spotify_RestAssured_playlist() {
+        RestAssured.defaultParser= Parser.JSON;
         Response respons = given()
                 .header("Accept", "application/json")
                 .header("Content-Type", "application/json")
                 .header("Authorization", token)
                 .when()
-              .get("https://api.spotify.com/v1/me/playlists")
-               .then()
-                .extract()
-                .path("id");
-        System.out.println();
-
+              .get("https://api.spotify.com/v1/me/playlists");
+        ResponseBody body = respons.getBody();
+       List<Map<String,String>> playlistName=respons.jsonPath().getList("items");
+        for (Map<String,String> playlist:playlistName) {
+            System.out.println(playlist.get("id"));
+            playlists.add(playlist.get("id"));
+        }
     }
-
-//        ResponseBody body = respons.getBody();
-//       JsonObject object = (JsonObject) new JsonParser().parse(body.prettyPrint());
-//        String playName = String.valueOf(object.get("name"));
-//        System.out.println(playName);
-//        respons.then().assertThat().statusCode(200);
- //   }
     @Test
     public void givenUserID_ShouldReturnTotalPlayList() {
         Response response = RestAssured.given()
@@ -102,15 +113,15 @@ public class SpotifyRestAssured {
     }
     @Test
     public void givenCodingLogin_WhenTokenIsCorrect_ShouldCreatePlayList() {
+        spotify_RestAssured_AutomationTest();
         Response response = given()
                 .accept("application/json")
                 .contentType("application/json")
                 .header("Authorization", token)
-                .body("{\"name\": \"New add Playlist 1\",\"description\": \"New playlist description\",\"public\": false" +
+                .body("{\"name\": \"New add Playlist 7\",\"description\": \"New playlist description\",\"public\": false" +
                    "}")
                 .when()
                 .post("https://api.spotify.com/v1/users/"+userId+"/playlists");
-        System.out.println(userId);
         response.prettyPrint();
     }
 
@@ -118,33 +129,41 @@ public class SpotifyRestAssured {
 
     @Test
     public void givenPlaylistId_ShouldCheckTrackList() {
-        Response respons = given()
-                .header("Accept", "application/json")
-                .header("Content-Type", "application/json")
-                .header("Authorization", token)
-                .when()
-                .get("https://api.spotify.com/v1/playlists/"+ playlistName +"/tracks");
-        ResponseBody body = respons.getBody();
-        JsonObject object = (JsonObject) new JsonParser().parse(body.prettyPrint());
-        tracklist = String.valueOf(object.get("id"));
-        System.out.println(tracklist);
-        respons.then().assertThat().statusCode(200);
-    }
+        spotify_RestAssured_playlist();
+            Response respons = given()
+                    .header("Accept", "application/json")
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", token)
+                    .when()
+                    .get("https://api.spotify.com/v1/playlists/" + playlists.get(5) + "/tracks");
+            ResponseBody body = respons.getBody();
+         //  JsonObject object = (JsonObject) new JsonParser().parse(body.prettyPrint());
+            respons.then().assertThat().statusCode(200);
+        List<Map<String,String>> tracklistName=respons.jsonPath().getList("items");
+        for (Map<String,String> tracklist:tracklistName)
+        {
+          System.out.println(tracklist.toString());
+//            tracklists.add(tracklist.get("id"));
+        }
+        }
+
 
     @Test
     public void givenPlayList_ShouldReturnTotalTrackList() {
+        givenPlaylistId_ShouldCheckTrackList();
         Response response = RestAssured.given()
                 .accept("application/json")
                 .contentType("application/json")
                 .header("Authorization", token)
                 .when().accept("application/json")
-                .get("https://api.spotify.com/v1/playlists/"+tracklist+"/tracks");
+                .get("https://api.spotify.com/v1/playlists/"+tracklists.get(0)+"/tracks");
         String asString = response.asString();
         JsonPath jsonPath = new JsonPath(asString);
-        int total = jsonPath.getInt("total");
-        System.out.println("total==>" + total);
-        response.prettyPrint();
+
         Object trackId = response.path("trackId");
+        System.out.println(trackId);
+        response.prettyPrint();
+
 
     }
     //--------------------------delete track--------------------------------
@@ -156,9 +175,10 @@ public class SpotifyRestAssured {
                 .header("Authorization", token)
                 .body("{\"tracks\":[{\"uri\":\"spotify:track:2DB2zVP1LVu6jjyrvqD44z\",\"positions\":[0]}]}")
                 .when()
-                .delete("https://api.spotify.com/v1/playlists/"+ playlistName +"/tracks").then()
+                .delete("https://api.spotify.com/v1/playlists/"+ playlists +"/tracks").then()
                 .extract().response();
         Object trackId = response.path("trackId");
         response.prettyPrint();
     }
 }
+
